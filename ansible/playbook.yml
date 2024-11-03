@@ -44,12 +44,6 @@
         update_cache: yes
       become: true
 
-    - name: Install Docker Python module
-      pip:
-        name: docker
-        state: present
-      become: true
-
     - name: Ensure Docker service is running
       service:
         name: docker
