@@ -3,44 +3,33 @@
   hosts: web_server
   become: true
   vars:
+    # Default values that can be overridden by --extra-vars
     container_name: flask-app
-    image_name: "{{ lookup('env', 'DOCKER_HUB_USERNAME') }}/flask-app:{{ github.sha }}"
+    environment: production
+    docker_registry: ""
+    docker_image: ""
 
   tasks:
-    - name: Wait for system to become reachable
-      wait_for_connection:
-        timeout: 300
-
-    - name: Install Docker (Ubuntu)
-      apt:
-        name: docker.io
-        state: present
-        update_cache: yes
-      when: ansible_distribution == 'Ubuntu'
-
-    - name: Start Docker service
-      service:
-        name: docker
-        state: started
-        enabled: yes
-
-    - name: Add EC2 user to docker group
-      user:
-        name: "{{ ansible_user }}"
-        groups: docker
-        append: yes
+    - name: Show variables for verification
+      debug:
+        msg: 
+          - "Docker Image: {{ docker_image }}"
+          - "Container Name: {{ container_name }}"
+          - "Environment: {{ environment }}"
 
     - name: Pull Docker image
       docker_image:
-        name: "{{ image_name }}"
+        name: "{{ docker_image }}"
         source: pull
         force_source: yes
 
     - name: Run Docker container
       docker_container:
         name: "{{ container_name }}"
-        image: "{{ image_name }}"
+        image: "{{ docker_image }}"
         state: started
         restart_policy: always
         published_ports:
           - "80:5000"
+        environment:
+          ENV: "{{ environment }}"
