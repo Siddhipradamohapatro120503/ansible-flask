@@ -1,0 +1,46 @@
+---
+- name: Deploy Flask application
+  hosts: web_server
+  become: true
+  vars:
+    container_name: flask-app
+    image_name: "{{ lookup('env', 'DOCKER_HUB_USERNAME') }}/flask-app:{{ github.sha }}"
+
+  tasks:
+    - name: Wait for system to become reachable
+      wait_for_connection:
+        timeout: 300
+
+    - name: Install Docker (Ubuntu)
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+      when: ansible_distribution == 'Ubuntu'
+
+    - name: Start Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add EC2 user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Pull Docker image
+      docker_image:
+        name: "{{ image_name }}"
+        source: pull
+        force_source: yes
+
+    - name: Run Docker container
+      docker_container:
+        name: "{{ container_name }}"
+        image: "{{ image_name }}"
+        state: started
+        restart_policy: always
+        published_ports:
+          - "80:5000"
